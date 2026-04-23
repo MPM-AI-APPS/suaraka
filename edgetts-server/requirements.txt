@@ -1,0 +1,5 @@
+# Suaraka TTS Server (Edge TTS)
+edge-tts
+fastapi
+uvicorn[standard]
+pydantic>=2.0

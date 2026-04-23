@@ -2,34 +2,19 @@ services:
   web:
     build: .
     env_file:
-      - .env.local
+      - .env
     ports:
       - "3000:3000"
     depends_on:
-      - keycloak
-      - chatterbox
+      - edgetts
     volumes:
       - suaraka_storage:/app/.storage
 
-  chatterbox:
-    build: ./chatterbox-server
+  edgetts:
+    build: ./edgetts-server
     ports:
       - "8100:8100"
-    volumes:
-      - chatterbox_voices:/data/voices
-      - chatterbox_jobs:/data/jobs
-    environment:
-      - DEVICE=cuda
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
 
 volumes:
   suaraka_db:
   suaraka_storage:
-  chatterbox_voices:
-  chatterbox_jobs:

@@ -40,7 +40,7 @@ export default async function Landing() {
           />
           <FeatureCard
             icon={<Headphones />}
-            title="Chatterbox TTS"
+            title="Natural TTS"
             body="Warm, natural narration in English and Bahasa Indonesia. Multiple voices, adjustable speed."
           />
           <FeatureCard

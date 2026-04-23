@@ -4,17 +4,17 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { books, chapters } from "@/db/schema";
 import { requireUser } from "@/app/api/_lib/session";
-import { synthesize } from "@/lib/chatterbox";
+import { synthesize } from "@/lib/tts";
 import { saveBuffer } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const schema = z.object({
-  voice: z.string().default("default"),
-  exaggeration: z.number().min(0.25).max(2).optional(),
-  cfgWeight: z.number().min(0).max(1).optional(),
-  temperature: z.number().min(0.05).max(5).optional(),
+  voice: z.string().default("en-US-AriaNeural"),
+  rate: z.string().optional(),
+  pitch: z.string().optional(),
+  volume: z.string().optional(),
 });
 
 export async function POST(
@@ -49,10 +49,9 @@ export async function POST(
     const result = await synthesize({
       text: chapter.text,
       voice: parsed.data.voice,
-      language: book.language,
-      exaggeration: parsed.data.exaggeration,
-      cfgWeight: parsed.data.cfgWeight,
-      temperature: parsed.data.temperature,
+      rate: parsed.data.rate,
+      pitch: parsed.data.pitch,
+      volume: parsed.data.volume,
     });
 
     const ext = result.mime === "audio/mpeg" ? "mp3" : "wav";

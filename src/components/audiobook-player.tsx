@@ -21,9 +21,9 @@ export function AudiobookPlayer({ bookId, language, chapters }: Props) {
   const { t } = useI18n();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [chapterIdx, setChapterIdx] = useState(0);
-  const [voice, setVoice] = useState("default");
+  const [voice, setVoice] = useState("en-US-AriaNeural");
   const [voices, setVoices] = useState<VoiceItem[]>([]);
-  const [exaggeration, setExaggeration] = useState(1.0);
+  const [rate, setRate] = useState("+0%");
   const [playing, setPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -32,19 +32,20 @@ export function AudiobookPlayer({ bookId, language, chapters }: Props) {
 
   const chapter = chapters[chapterIdx];
 
-  // Fetch available voices once on mount
+  // Fetch voices when language changes
   useEffect(() => {
-    api.listVoices().then((list) => {
+    api.listVoices(language).then((list) => {
       if (list.length > 0) {
         setVoices(list);
         setVoice(list[0].name);
+      } else {
+        setVoices([]);
+        setVoice("en-US-AriaNeural");
       }
     }).catch(() => {
-      // keep default state — voice selector will be empty until resolved
+      setVoices([]);
     });
-    // intentionally runs only on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [language]);
 
   // Reset / preload audio when chapter changes
   useEffect(() => {
@@ -66,7 +67,7 @@ export function AudiobookPlayer({ bookId, language, chapters }: Props) {
     try {
       const r = await api.generateChapter(bookId, chapter.id, {
         voice,
-        exaggeration,
+        rate,
       });
       setAudioUrl(r.audioUrl);
       if (r.durationSec) setDuration(r.durationSec);
@@ -223,35 +224,44 @@ export function AudiobookPlayer({ bookId, language, chapters }: Props) {
         )}
 
         {/* Controls */}
-        <div className="mt-5 grid gap-4 border-t border-border/60 pt-4 sm:grid-cols-2">
-          <div>
-            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-              <span>{t.book.voice}</span>
+        <div className="mt-5 grid gap-4 border-t border-border/60 pt-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Voice */}
+            <div>
+              <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>{t.book.voice}</span>
+              </div>
+              <select
+                value={voice}
+                onChange={(e) => setVoice(e.target.value)}
+                className="h-9 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              >
+                {voices.map((v) => (
+                  <option key={v.name} value={v.name}>
+                    {v.name}{v.gender ? ` · ${v.gender}` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
-            <select
-              value={voice}
-              onChange={(e) => setVoice(e.target.value)}
-              className="h-9 w-full rounded-xl border border-border bg-input px-3 text-sm"
-            >
-              {voices.map((v) => (
-                <option key={v.name} value={v.name}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-              <span>Emotion</span>
-              <span className="font-mono">{exaggeration.toFixed(2)}</span>
+
+            {/* Speed */}
+            <div>
+              <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>Speed</span>
+              </div>
+              <select
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+                className="h-9 w-full rounded-xl border border-border bg-input px-3 text-sm"
+              >
+                <option value="-50%">0.5×</option>
+                <option value="-25%">0.75×</option>
+                <option value="+0%">1×</option>
+                <option value="+25%">1.25×</option>
+                <option value="+50%">1.5×</option>
+                <option value="+100%">2×</option>
+              </select>
             </div>
-            <Slider
-              value={exaggeration}
-              min={0.25}
-              max={2}
-              step={0.05}
-              onValueChange={setExaggeration}
-            />
           </div>
         </div>
       </div>

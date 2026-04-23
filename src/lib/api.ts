@@ -33,14 +33,16 @@ export interface ChapterSummary {
 
 export interface VoiceItem {
   name: string;
+  gender?: string;
+  locale?: string;
   language?: string;
 }
 
 export interface GenerateChapterOptions {
   voice: string;
-  exaggeration?: number;
-  cfgWeight?: number;
-  temperature?: number;
+  rate?: string;
+  pitch?: string;
+  volume?: string;
 }
 
 export const api = {
@@ -59,8 +61,11 @@ export const api = {
     const { data } = await http.patch(`/books/${id}`, patch);
     return data;
   },
-  async listVoices(): Promise<VoiceItem[]> {
-    const { data } = await http.get("/voices");
+  async listVoices(language?: string): Promise<VoiceItem[]> {
+    const params = new URLSearchParams();
+    if (language) params.set("language", language);
+    const qs = params.toString();
+    const { data } = await http.get(`/voices${qs ? `?${qs}` : ""}`);
     return data as VoiceItem[];
   },
   async generateChapter(

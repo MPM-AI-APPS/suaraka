@@ -17,7 +17,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Suaraka — Your Library, Now in Voice.",
   description:
-    "Turn any PDF, article, or learning module into a natural audiobook with Chatterbox TTS. Your personal, calm, AI-powered listening studio.",
+    "Turn any PDF, article, or learning module into a natural audiobook with AI-powered text-to-speech. Your personal, calm listening studio.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
