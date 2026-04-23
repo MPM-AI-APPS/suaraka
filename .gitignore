@@ -1,0 +1,24 @@
+node_modules
+.next
+.turbo
+out
+dist
+
+# local env
+.env
+.env.local
+.env.*.local
+
+# local storage for uploads + generated audio
+.storage
+
+# logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# misc
+.DS_Store
+*.tsbuildinfo
+.vercel

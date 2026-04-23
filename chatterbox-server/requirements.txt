@@ -1,0 +1,9 @@
+# Chatterbox TTS Server
+chatterbox-tts
+torch
+torchaudio
+fastapi
+uvicorn[standard]
+pydantic>=2.0
+python-multipart
+numpy
