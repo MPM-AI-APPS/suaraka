@@ -10,7 +10,7 @@ import { api } from "@/lib/api";
 import { useI18n } from "@/components/i18n-provider";
 import { toast } from "sonner";
 
-interface ChapterInsights {
+interface PageInsights {
   summary: string;
   takeaways: string[];
   vocabulary: { term: string; definition: string }[];
@@ -18,23 +18,23 @@ interface ChapterInsights {
 
 export function BookAssistant({
   bookId,
-  currentChapterId,
+  currentPageId,
 }: {
   bookId: string;
-  currentChapterId?: string;
+  currentPageId?: string;
 }) {
   const { t, locale } = useI18n();
-  const [summary, setSummary] = useState<ChapterInsights | null>(null);
+  const [summary, setSummary] = useState<PageInsights | null>(null);
   const [summarizing, setSummarizing] = useState(false);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
 
   const doSummarize = async () => {
-    if (!currentChapterId) return;
+    if (!currentPageId) return;
     setSummarizing(true);
     try {
-      const r = await api.summarizeChapter(bookId, currentChapterId, locale);
+      const r = await api.summarizePage(bookId, currentPageId, locale);
       setSummary(r);
     } catch (e) {
       console.error(e);
@@ -71,7 +71,7 @@ export function BookAssistant({
               size="sm"
               variant="outline"
               className="rounded-full"
-              disabled={summarizing || !currentChapterId}
+              disabled={summarizing || !currentPageId}
               onClick={doSummarize}
             >
               {summarizing ? <Loader2 className="animate-spin" /> : <Sparkles />}

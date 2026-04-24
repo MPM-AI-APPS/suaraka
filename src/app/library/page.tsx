@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useI18n } from "@/components/i18n-provider";
 import { api, type BookSummary } from "@/lib/api";
 import { toast } from "sonner";
@@ -17,6 +24,7 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [onlyFav, setOnlyFav] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -39,9 +47,9 @@ export default function LibraryPage() {
   }, [books, query, onlyFav]);
 
   const onDelete = async (id: string) => {
-    if (!confirm("Delete this book?")) return;
     await api.deleteBook(id);
     setBooks((prev) => prev.filter((b) => b.id !== id));
+    setDeleteId(null);
     toast.success("Deleted");
   };
 
@@ -152,7 +160,7 @@ export default function LibraryPage() {
                     variant="ghost"
                     size="icon"
                     aria-label="Delete"
-                    onClick={() => onDelete(b.id)}
+                    onClick={() => setDeleteId(b.id)}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 />
@@ -163,6 +171,28 @@ export default function LibraryPage() {
           ))}
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteId !== null} onOpenChange={(v) => !v && setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.book.confirmDeleteTitle}</DialogTitle>
+            <DialogDescription>{t.book.confirmDelete}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setDeleteId(null)}>
+              {t.common.cancel}
+            </Button>
+            <Button
+              variant="destructive"
+              className="rounded-full"
+              onClick={() => deleteId && onDelete(deleteId)}
+            >
+              {t.common.delete}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

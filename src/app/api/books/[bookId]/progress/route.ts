@@ -9,7 +9,7 @@ import { newId } from "@/lib/utils";
 export const runtime = "nodejs";
 
 const schema = z.object({
-  chapterId: z.string().optional(),
+  pageId: z.string().optional(),
   positionSec: z.number().min(0),
 });
 
@@ -40,7 +40,7 @@ export async function POST(
     await db
       .update(progress)
       .set({
-        chapterId: parsed.data.chapterId ?? existing.chapterId,
+        pageId: parsed.data.pageId ?? existing.pageId,
         positionSec: parsed.data.positionSec,
         updatedAt: new Date(),
       })
@@ -50,7 +50,7 @@ export async function POST(
       id: newId("pr"),
       userId: guard.user.id,
       bookId,
-      chapterId: parsed.data.chapterId ?? null,
+      pageId: parsed.data.pageId ?? null,
       positionSec: parsed.data.positionSec,
     });
   }

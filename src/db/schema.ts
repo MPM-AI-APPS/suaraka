@@ -52,14 +52,12 @@ export const books = pgTable("suaraka_books", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** A detected chapter within a book. */
-export const chapters = pgTable("suaraka_chapters", {
+/** A page extracted from a book's PDF. */
+export const pages = pgTable("suaraka_pages", {
   id: text("id").primaryKey(),
   bookId: text("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
   index: integer("index").notNull(),
-  title: text("title").notNull(),
-  startPage: integer("start_page"),
-  endPage: integer("end_page"),
+  pageNumber: integer("page_number").notNull(),
   text: text("text").notNull(),
   wordCount: integer("word_count").notNull().default(0),
   audioPath: text("audio_path"), // storage-relative mp3/wav
@@ -70,8 +68,8 @@ export const chapters = pgTable("suaraka_chapters", {
 });
 
 /** Word-level timing for karaoke-style highlight. */
-export const chapterTimings = pgTable("suaraka_chapter_timings", {
-  chapterId: text("chapter_id").primaryKey().references(() => chapters.id, { onDelete: "cascade" }),
+export const pageTimings = pgTable("suaraka_page_timings", {
+  pageId: text("page_id").primaryKey().references(() => pages.id, { onDelete: "cascade" }),
   words: jsonb("words").$type<Array<{ w: string; s: number; e: number }>>().notNull(),
 });
 
@@ -80,7 +78,7 @@ export const progress = pgTable("suaraka_progress", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   bookId: text("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
-  chapterId: text("chapter_id").references(() => chapters.id, { onDelete: "set null" }),
+  pageId: text("page_id").references(() => pages.id, { onDelete: "set null" }),
   positionSec: real("position_sec").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("suaraka_progress_user_book_idx").on(t.userId, t.bookId)]);
@@ -89,18 +87,18 @@ export const bookmarks = pgTable("suaraka_bookmarks", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   bookId: text("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
-  chapterId: text("chapter_id").references(() => chapters.id, { onDelete: "cascade" }),
+  pageId: text("page_id").references(() => pages.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   positionSec: real("position_sec").notNull().default(0),
   note: text("note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** AI-generated chapter insights (summary, takeaways, vocab). */
+/** AI-generated page insights (summary, takeaways, vocab). */
 export const insights = pgTable("suaraka_insights", {
   id: text("id").primaryKey(),
   bookId: text("book_id").notNull().references(() => books.id, { onDelete: "cascade" }),
-  chapterId: text("chapter_id").references(() => chapters.id, { onDelete: "cascade" }),
+  pageId: text("page_id").references(() => pages.id, { onDelete: "cascade" }),
   kind: text("kind").notNull(), // summary | takeaways | notes | vocabulary
   content: jsonb("content").$type<unknown>().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

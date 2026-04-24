@@ -3,28 +3,34 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Heart } from "lucide-react";
+import { ArrowLeft, Heart, LayoutPanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AudiobookPlayer } from "@/components/audiobook-player";
 import { BookAssistant } from "@/components/book-assistant";
-import { api, type BookSummary, type ChapterSummary } from "@/lib/api";
+import { api, type BookSummary, type PageSummary } from "@/lib/api";
+import { useI18n } from "@/components/i18n-provider";
 import { toast } from "sonner";
+
+const AUDIO_ENABLED = process.env.NEXT_PUBLIC_ENABLE_AUDIO !== "false";
 
 export default function BookPage() {
   const { bookId } = useParams<{ bookId: string }>();
+  const { t } = useI18n();
   const [book, setBook] = useState<BookSummary | null>(null);
-  const [chapters, setChapters] = useState<ChapterSummary[]>([]);
+  const [pages, setPages] = useState<PageSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeChapterId, setActiveChapterId] = useState<string | undefined>();
+  const [activePageId, setActivePageId] = useState<string | undefined>();
+  const [mode, setMode] = useState<"audio" | "text">(AUDIO_ENABLED ? "audio" : "text");
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   useEffect(() => {
     api
       .getBook(bookId)
       .then((r) => {
         setBook(r.book);
-        setChapters(r.chapters);
-        setActiveChapterId(r.chapters[0]?.id);
+        setPages(r.pages);
+        setActivePageId(r.pages[0]?.id);
       })
       .catch(() => toast.error("Failed to load book"))
       .finally(() => setLoading(false));
@@ -88,13 +94,44 @@ export default function BookPage() {
         {book.author && <p className="text-sm text-muted-foreground">{book.author}</p>}
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start">
+      <div
+        className={
+          mode === "text"
+            ? "flex flex-col gap-5"
+            : "grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start"
+        }
+      >
         <AudiobookPlayer
           bookId={book.id}
           language={book.language}
-          chapters={chapters}
+          pages={pages}
+          mode={mode}
+          onModeChange={setMode}
+          onPageChange={setActivePageId}
         />
-        <BookAssistant bookId={book.id} currentChapterId={activeChapterId} />
+
+        {/* In audio mode: always-visible sidebar. In text mode: collapsible panel below. */}
+        {mode === "audio" ? (
+          <BookAssistant bookId={book.id} currentPageId={activePageId} />
+        ) : (
+          <div className="suaraka-glass rounded-2xl overflow-hidden">
+            <button
+              onClick={() => setAssistantOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-sm font-medium hover:bg-secondary/40 transition"
+            >
+              <span className="flex items-center gap-2">
+                <LayoutPanelLeft className="h-4 w-4 text-primary" />
+                {t.book.assistantPanel}
+              </span>
+              <span className="text-muted-foreground">{assistantOpen ? "▲" : "▼"}</span>
+            </button>
+            {assistantOpen && (
+              <div className="border-t border-border/60 p-4">
+                <BookAssistant bookId={book.id} currentPageId={activePageId} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

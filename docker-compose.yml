@@ -12,8 +12,6 @@ services:
 
   edgetts:
     build: ./edgetts-server
-    ports:
-      - "8100:8100"
 
 volumes:
   suaraka_db:

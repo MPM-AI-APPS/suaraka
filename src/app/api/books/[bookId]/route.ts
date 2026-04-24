@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, asc, eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { books, chapters } from "@/db/schema";
+import { books, pages } from "@/db/schema";
 import { requireUser } from "../../_lib/session";
 import { remove } from "@/lib/storage";
 import { z } from "zod";
@@ -28,11 +28,11 @@ export async function GET(
   if (!book) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const db = getDb();
-  const chapterRows = await db
+  const pageRows = await db
     .select()
-    .from(chapters)
-    .where(eq(chapters.bookId, bookId))
-    .orderBy(asc(chapters.index));
+    .from(pages)
+    .where(eq(pages.bookId, bookId))
+    .orderBy(asc(pages.index));
 
   return NextResponse.json({
     book: {
@@ -47,18 +47,25 @@ export async function GET(
       createdAt: book.createdAt,
       updatedAt: book.updatedAt,
     },
-    chapters: chapterRows.map((c) => {
+    pages: pageRows.map((p) => {
       const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
       return {
-        id: c.id,
-        index: c.index,
-        title: c.title,
-        wordCount: c.wordCount,
-        audioStatus: c.audioStatus,
-        audioDurationSec: c.audioDurationSec,
+        id: p.id,
+        index: p.index,
+        pageNumber: p.pageNumber,
+        text: p.text,
+        wordCount: p.wordCount,
+        audioStatus: p.audioStatus,
+        audioDurationSec: p.audioDurationSec,
+        audioVoice: p.audioVoice ?? null,
+        audioVoiceLang: p.audioVoice
+          ? p.audioVoice.startsWith("id")
+            ? "id"
+            : "en"
+          : null,
         audioUrl:
-          c.audioStatus === "ready"
-            ? `${basePath}/api/books/${bookId}/chapters/${c.id}/audio`
+          p.audioStatus === "ready"
+            ? `${basePath}/api/books/${bookId}/pages/${p.id}/audio`
             : null,
       };
     }),

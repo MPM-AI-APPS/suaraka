@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { books, chapters } from "@/db/schema";
+import { books, pages } from "@/db/schema";
 import { requireUser } from "@/app/api/_lib/session";
 import { synthesize } from "@/lib/tts";
 import { saveBuffer } from "@/lib/storage";
@@ -19,11 +19,11 @@ const schema = z.object({
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ bookId: string; chapterId: string }> }
+  { params }: { params: Promise<{ bookId: string; pageId: string }> }
 ) {
   const guard = await requireUser();
   if ("error" in guard) return guard.error;
-  const { bookId, chapterId } = await params;
+  const { bookId, pageId } = await params;
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -35,19 +35,19 @@ export async function POST(
   });
   if (!book) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const chapter = await db.query.chapters.findFirst({
-    where: and(eq(chapters.id, chapterId), eq(chapters.bookId, bookId)),
+  const page = await db.query.pages.findFirst({
+    where: and(eq(pages.id, pageId), eq(pages.bookId, bookId)),
   });
-  if (!chapter) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!page) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   await db
-    .update(chapters)
+    .update(pages)
     .set({ audioStatus: "generating" })
-    .where(eq(chapters.id, chapterId));
+    .where(eq(pages.id, pageId));
 
   try {
     const result = await synthesize({
-      text: chapter.text,
+      text: page.text,
       voice: parsed.data.voice,
       rate: parsed.data.rate,
       pitch: parsed.data.pitch,
@@ -55,30 +55,30 @@ export async function POST(
     });
 
     const ext = result.mime === "audio/mpeg" ? "mp3" : "wav";
-    const audioPath = `users/${guard.user.id}/books/${bookId}/audio/${chapterId}.${ext}`;
+    const audioPath = `users/${guard.user.id}/books/${bookId}/audio/${pageId}.${ext}`;
     await saveBuffer(audioPath, result.audio);
 
     await db
-      .update(chapters)
+      .update(pages)
       .set({
         audioPath,
         audioDurationSec: result.durationSec ?? null,
         audioVoice: parsed.data.voice,
         audioStatus: "ready",
       })
-      .where(eq(chapters.id, chapterId));
+      .where(eq(pages.id, pageId));
 
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
     return NextResponse.json({
-      audioUrl: `${basePath}/api/books/${bookId}/chapters/${chapterId}/audio`,
+      audioUrl: `${basePath}/api/books/${bookId}/pages/${pageId}/audio`,
       durationSec: result.durationSec,
     });
   } catch (err) {
     console.error("TTS failed", err);
     await db
-      .update(chapters)
+      .update(pages)
       .set({ audioStatus: "failed" })
-      .where(eq(chapters.id, chapterId));
+      .where(eq(pages.id, pageId));
     return NextResponse.json({ error: "TTS failed" }, { status: 502 });
   }
 }

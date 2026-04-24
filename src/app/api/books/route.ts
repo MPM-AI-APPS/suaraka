@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { books, chapters } from "@/db/schema";
+import { books, pages } from "@/db/schema";
 import { requireUser } from "../_lib/session";
 import { extractPdf, guessMeta } from "@/lib/pdf";
 import { saveBuffer } from "@/lib/storage";
@@ -86,15 +86,15 @@ export async function POST(req: NextRequest) {
     })
     .returning();
 
-  if (extracted.chapters.length > 0) {
-    await db.insert(chapters).values(
-      extracted.chapters.map((c) => ({
-        id: newId("ch"),
+  if (extracted.pages.length > 0) {
+    await db.insert(pages).values(
+      extracted.pages.map((p) => ({
+        id: newId("pg"),
         bookId,
-        index: c.index,
-        title: c.title.slice(0, 200),
-        text: c.text,
-        wordCount: c.wordCount,
+        index: p.index,
+        pageNumber: p.pageNumber,
+        text: p.text,
+        wordCount: p.wordCount,
       }))
     );
   }

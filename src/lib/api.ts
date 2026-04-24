@@ -21,13 +21,16 @@ export interface BookSummary {
   updatedAt: string;
 }
 
-export interface ChapterSummary {
+export interface PageSummary {
   id: string;
   index: number;
-  title: string;
+  pageNumber: number;
+  text: string;
   wordCount: number;
   audioStatus: "idle" | "generating" | "ready" | "failed";
   audioDurationSec?: number | null;
+  audioVoice?: string | null;
+  audioVoiceLang?: "en" | "id" | null;
   audioUrl?: string | null;
 }
 
@@ -38,7 +41,7 @@ export interface VoiceItem {
   language?: string;
 }
 
-export interface GenerateChapterOptions {
+export interface GeneratePageOptions {
   voice: string;
   rate?: string;
   pitch?: string;
@@ -50,7 +53,7 @@ export const api = {
     const { data } = await http.get("/books");
     return data;
   },
-  async getBook(id: string): Promise<{ book: BookSummary; chapters: ChapterSummary[] }> {
+  async getBook(id: string): Promise<{ book: BookSummary; pages: PageSummary[] }> {
     const { data } = await http.get(`/books/${id}`);
     return data;
   },
@@ -68,24 +71,32 @@ export const api = {
     const { data } = await http.get(`/voices${qs ? `?${qs}` : ""}`);
     return data as VoiceItem[];
   },
-  async generateChapter(
+  async generatePage(
     bookId: string,
-    chapterId: string,
-    opts: GenerateChapterOptions
+    pageId: string,
+    opts: GeneratePageOptions
   ) {
-    const { data } = await http.post(`/books/${bookId}/chapters/${chapterId}/tts`, opts);
+    const { data } = await http.post(`/books/${bookId}/pages/${pageId}/tts`, opts);
     return data as { audioUrl: string; durationSec?: number };
   },
-  async summarizeChapter(bookId: string, chapterId: string, locale: "en" | "id") {
-    const { data } = await http.post(`/books/${bookId}/chapters/${chapterId}/summary`, { locale });
+  async summarizePage(bookId: string, pageId: string, locale: "en" | "id") {
+    const { data } = await http.post(`/books/${bookId}/pages/${pageId}/summary`, { locale });
     return data as { summary: string; takeaways: string[]; vocabulary: { term: string; definition: string }[] };
   },
   async askBook(bookId: string, question: string, locale: "en" | "id") {
     const { data } = await http.post(`/books/${bookId}/ask`, { question, locale });
     return data as { answer: string };
   },
-  async saveProgress(bookId: string, chapterId: string, positionSec: number) {
-    await http.post(`/books/${bookId}/progress`, { chapterId, positionSec });
+  async reformatPage(bookId: string, pageId: string) {
+    const { data } = await http.post(`/books/${bookId}/pages/${pageId}/reformat`);
+    return data as { reformatted: string };
+  },
+  async translatePage(bookId: string, pageId: string, target: "en" | "id") {
+    const { data } = await http.post(`/books/${bookId}/pages/${pageId}/translate`, { target });
+    return data as { translated: string; target: string };
+  },
+  async saveProgress(bookId: string, pageId: string, positionSec: number) {
+    await http.post(`/books/${bookId}/progress`, { pageId, positionSec });
   },
 };
 

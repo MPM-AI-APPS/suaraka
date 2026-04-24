@@ -1,9 +1,15 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Headphones, Sparkles, BookOpen } from "lucide-react";
 
 export default async function Landing() {
+  // When login is disabled, go straight to the library
+  if (process.env.NEXT_PUBLIC_DISABLE_LOGIN === "true") {
+    redirect("/library");
+  }
+
   const session = await auth();
   const cta = session?.user ? "/library" : "/login";
 
@@ -36,7 +42,7 @@ export default async function Landing() {
           <FeatureCard
             icon={<BookOpen />}
             title="Smart PDF ingest"
-            body="Clean text extraction, automatic chapter detection, preserved reading order."
+            body="Clean text extraction, page-by-page processing, preserved reading order."
           />
           <FeatureCard
             icon={<Headphones />}
@@ -46,7 +52,7 @@ export default async function Landing() {
           <FeatureCard
             icon={<Sparkles />}
             title="AI companion"
-            body="Summarize chapters, extract key takeaways, and ask questions about your library."
+            body="Summarize pages, extract key takeaways, and ask questions about your library."
           />
         </div>
       </section>

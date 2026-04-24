@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,10 +10,20 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Headphones } from "lucide-react";
 
+const LOGIN_DISABLED = process.env.NEXT_PUBLIC_DISABLE_LOGIN === "true";
+
 function LoginInner() {
   const { t } = useI18n();
   const sp = useSearchParams();
+  const router = useRouter();
   const callbackUrl = sp.get("callbackUrl") || "/library";
+
+  // When login is disabled, immediately send users to the library
+  useEffect(() => {
+    if (LOGIN_DISABLED) router.replace("/library");
+  }, [router]);
+
+  if (LOGIN_DISABLED) return null;
 
   return (
     <main className="suaraka-page flex min-h-screen items-center justify-center p-6">

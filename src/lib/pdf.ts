@@ -4,24 +4,15 @@ export interface ExtractedBook {
   text: string;
   pageCount: number;
   wordCount: number;
-  chapters: ExtractedChapter[];
+  pages: ExtractedPage[];
 }
 
-export interface ExtractedChapter {
+export interface ExtractedPage {
   index: number;
-  title: string;
-  startPage?: number;
-  endPage?: number;
+  pageNumber: number;
   text: string;
   wordCount: number;
 }
-
-/** Chapter heading heuristic. Detects lines like:
- *   "Chapter 3", "CHAPTER III. THE OPEN SEA", "Bab 5", "Bagian II — ...",
- *   or "1. Introduction", "I. Pendahuluan".
- */
-const CHAPTER_RE =
-  /^\s*(?:(?:chapter|bab|bagian|part|section)\s+[ivxlcdm0-9]+|[ivxlcdm]{1,5}\.|\d{1,3}\.)\b.*$/i;
 
 function wordCount(text: string) {
   return text.trim().split(/\s+/).filter(Boolean).length;
@@ -32,56 +23,46 @@ export async function extractPdf(buffer: Buffer): Promise<ExtractedBook> {
   const raw = (parsed.text || "").replace(/\r\n/g, "\n");
   const pageCount = parsed.numpages || 0;
 
-  const lines = raw.split("\n").map((l) => l.trim());
-
-  // Detect chapter boundaries.
-  const boundaries: { line: number; title: string }[] = [];
-  lines.forEach((line, i) => {
-    if (!line) return;
-    if (line.length > 120) return;
-    if (CHAPTER_RE.test(line)) {
-      boundaries.push({ line: i, title: line.replace(/\s+/g, " ").trim() });
-    }
+  // pdf-parse concatenates all pages; we re-parse to get per-page text.
+  // It uses a custom pagerender callback to split by page.
+  const pageTexts: string[] = [];
+  await pdfParse(buffer, {
+    pagerender(pageData: { getTextContent: () => Promise<{ items: { str: string }[] }> }) {
+      return pageData.getTextContent().then((content) => {
+        const text = content.items.map((item) => item.str).join(" ");
+        pageTexts.push(text);
+        return text;
+      });
+    },
   });
 
-  const chapters: ExtractedChapter[] = [];
-  if (boundaries.length >= 2) {
-    for (let c = 0; c < boundaries.length; c++) {
-      const start = boundaries[c].line;
-      const end = c + 1 < boundaries.length ? boundaries[c + 1].line : lines.length;
-      const body = lines.slice(start + 1, end).join("\n").trim();
-      if (!body) continue;
-      chapters.push({
-        index: c,
-        title: boundaries[c].title,
-        text: body,
-        wordCount: wordCount(body),
-      });
-    }
+  const pages: ExtractedPage[] = [];
+  for (let i = 0; i < pageTexts.length; i++) {
+    const text = pageTexts[i].trim();
+    if (!text) continue;
+    pages.push({
+      index: pages.length,
+      pageNumber: i + 1,
+      text,
+      wordCount: wordCount(text),
+    });
   }
 
-  // Fallback: no chapters detected → split by roughly ~2000 word segments so TTS
-  // stays responsive and the listener gets navigable pieces.
-  if (chapters.length === 0) {
-    const words = raw.split(/\s+/).filter(Boolean);
-    const SEG = 2000;
-    for (let i = 0, idx = 0; i < words.length; i += SEG, idx++) {
-      const text = words.slice(i, i + SEG).join(" ").trim();
-      if (!text) continue;
-      chapters.push({
-        index: idx,
-        title: `Section ${idx + 1}`,
-        text,
-        wordCount: wordCount(text),
-      });
-    }
+  // Fallback if pagerender produced nothing (shouldn't happen, but just in case)
+  if (pages.length === 0 && raw.trim()) {
+    pages.push({
+      index: 0,
+      pageNumber: 1,
+      text: raw.trim(),
+      wordCount: wordCount(raw),
+    });
   }
 
   return {
     text: raw,
     pageCount,
     wordCount: wordCount(raw),
-    chapters,
+    pages,
   };
 }
 

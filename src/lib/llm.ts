@@ -13,13 +13,13 @@ export function getLlm() {
   });
 }
 
-/** Summarize a single chapter. */
-export async function summarizeChapter(text: string, language: "en" | "id") {
+/** Summarize a single page's content. */
+export async function summarizePage(text: string, language: "en" | "id") {
   const llm = getLlm();
   const instruction =
     language === "id"
-      ? "Ringkas bab berikut dalam 5-7 kalimat jelas, lalu berikan 5 poin kunci (key takeaways) dan 5 kosa kata penting beserta definisinya. Balas dalam JSON dengan kunci: summary (string), takeaways (string[]), vocabulary ({term, definition}[])."
-      : "Summarize the following chapter in 5-7 clear sentences, then give 5 key takeaways and 5 important vocabulary terms with short definitions. Reply in JSON with keys: summary (string), takeaways (string[]), vocabulary ({term, definition}[]).";
+      ? "Ringkas halaman berikut dalam 3-5 kalimat jelas, lalu berikan poin kunci (key takeaways) dan kosa kata penting beserta definisinya. Balas dalam JSON dengan kunci: summary (string), takeaways (string[]), vocabulary ({term, definition}[])."
+      : "Summarize the following page in 3-5 clear sentences, then give key takeaways and important vocabulary terms with short definitions. Reply in JSON with keys: summary (string), takeaways (string[]), vocabulary ({term, definition}[]).";
 
   const res = await llm.invoke([
     { role: "system", content: instruction },
@@ -31,6 +31,47 @@ export async function summarizeChapter(text: string, language: "en" | "id") {
   } catch {
     return { summary: content, takeaways: [], vocabulary: [] };
   }
+}
+
+/** Reformat raw PDF-extracted text into clean, readable paragraphs. */
+export async function reformatPageText(text: string, language: "en" | "id") {
+  const llm = getLlm();
+  const instruction =
+    language === "id"
+      ? `Kamu adalah editor teks. Teks berikut diekstrak dari PDF dan mungkin memiliki masalah seperti:
+- Baris putus di tengah kalimat akibat layout PDF
+- Kata yang terpotong dengan tanda hubung di akhir baris (mis. "se- suatu")
+- Header/footer halaman yang ikut terbaca
+- Spasi dan paragraf yang tidak teratur
+
+Tugasmu: bersihkan dan format ulang teks menjadi paragraf-paragraf yang nyaman dibaca.
+Jangan ubah isi atau artinya. Jangan tambahkan kata. Balas HANYA dengan teks yang sudah diformat, tanpa penjelasan.`
+      : `You are a text editor. The following text was extracted from a PDF and may have issues such as:
+- Line breaks in the middle of sentences due to PDF layout
+- Hyphenated words split across lines (e.g. "some- thing" → "something")
+- Page headers/footers mixed into the body
+- Irregular spacing and paragraph breaks
+
+Your task: clean up and reformat the text into well-structured, comfortable-to-read paragraphs.
+Do not change the content or meaning. Do not add words. Reply ONLY with the reformatted text, no explanations.`;
+
+  const res = await llm.invoke([
+    { role: "system", content: instruction },
+    { role: "user", content: text.slice(0, 16000) },
+  ]);
+  return typeof res.content === "string" ? res.content : JSON.stringify(res.content);
+}
+
+/** Detect language and translate text. */
+export async function translateText(text: string, targetLanguage: "en" | "id") {
+  const llm = getLlm();
+  const targetLabel = targetLanguage === "id" ? "Indonesian" : "English";
+  const instruction = `You are a translator. Detect the language of the given text and translate it to ${targetLabel}. If it's already in ${targetLabel}, return the original text. Reply ONLY with the translated text, nothing else.`;
+  const res = await llm.invoke([
+    { role: "system", content: instruction },
+    { role: "user", content: text.slice(0, 16000) },
+  ]);
+  return typeof res.content === "string" ? res.content : JSON.stringify(res.content);
 }
 
 /** Answer a question grounded in a book's text. */
